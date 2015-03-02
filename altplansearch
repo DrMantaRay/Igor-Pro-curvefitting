@@ -1,0 +1,94 @@
+#pragma rtGlobals=3		// Use modern global access method and strict wave access.
+Function altplansearch(numperround) 
+	Variable numperround
+	Wave x3, y3 
+	Variable/G pos
+	Variable f1
+	Variable/G width 
+	Variable/G posright
+	Variable/G posleft
+	Variable/G overlap
+	f1= x3[pos]-width
+	posleft=Binarysearch(x3,f1)+1           //finds index corresponding to distance width left of gate voltage
+	f1=x3[pos]+width
+	posright=Binarysearch(x3,f1)             //finds index corresponding to distance wdith to right of gate voltage
+	If  (posright== NAN || posright<posleft)
+		posright=numpnts(x3)-1
+	endif
+	print "posleft=" + num2str(posleft)
+	print "posright=" + num2str(posright)
+	Make/o/n=(posright-posleft+1) xpos
+	Make/o/n=(posright-posleft+1) ypos
+	xpos[0,posright-posleft]= x3[p+posleft]
+	ypos[0,posright-posleft]=y3[p+posleft]
+	
+	Make/o/d/n=(posright-posleft+1) leftdecay
+	Make/o/d/n=(posright-posleft+1) rightdecay
+	
+	
+	leftdecay[]=min(1, exp(-(xpos[p]-x3[pos])/overlap))
+	rightdecay[]=min(1, exp((xpos[p]-x3[pos])/overlap))
+	Make/o/n=(numperround,12) myx1
+	myx1= -4
+	
+	Variable kkk
+	for (kkk=0;kkk<=numperround-1;kkk+=1)
+		Make/o/n=(1,6) rescalea
+		Make/o/n=(1,6) rescaleb
+		Variable/G targetfreq, amp, hh
+		Variable/G width
+		rescalea= {{targetfreq}, {amp}, {pi}, {pi} ,{hh}, {0}}
+		rescaleb={{targetfreq*.1},{amp*.1},{pi},{pi},{amp},{(amp/width)*.1}}
+		// The attempt is to rescale the six axes so they're all about one
+		Make/o/N=(7,6) start
+		Make/o/N=(7,6) rand 
+		wave start
+		variable j 
+		variable i 
+		for (i=0;i<=6;i+=1)
+			for (j=0;j<=5;j+=1)
+				rand[i][j]=enoise(.5)+.5
+			endfor
+		endfor 
+		// random square matrix 
+		matrixtranspose rescaleb
+		Matrixop/o matr=diagonal(rescaleb)
+		matrixtranspose rescaleb
+		Matrixop/o start=rand x matr // this is our starting guess for the search routine 
+		nelder_mead(start) // search routine 
+		variable resa
+		wave xb
+		wave sizemn
+		resa= penaltyfun(xb)
+		Make/o/n=(1,sizemn[1]) xa
+		xa=xb*rescaleb+rescalea // rescaling back 
+		
+		myx1[kkk][0,5]=xa[0][q]
+		myx1[kkk][6]=-resa
+		myx1[kkk][7]=posleft
+		myx1[kkk][8]=posright
+		myx1[kkk][9]=mod((xa[0][2]-xa[0][3])/pi,2)
+		myx1[kkk][10]=pos
+		myx1[kkk][11]=x3[pos]	
+	endfor
+	variable starter1=200
+	if (numperround>1) // sorting results according to resa
+		variable starter
+		starter=-2
+		for (i=0;i<=numperround-1;i+=1)
+			if (myx1[i][6]>=starter)
+				starter=myx1[i][6]
+				starter1=i
+			endif 
+		endfor
+	endif
+	wave good
+	good[0][]=myx1[starter1][q]
+	
+	
+		
+	
+end 
+
+
+

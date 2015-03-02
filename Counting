@@ -1,0 +1,34 @@
+#pragma rtGlobals=3		// Use modern global access method and strict wave access.
+function countphaseslips(matr)
+	wave matr
+	variable tolcount
+	tolcount= .1 //size of bins
+	variable lookskip
+	lookskip=8
+	variable dimensions
+	dimensions= dimsize(matr,0)
+	make/o/n=3 phaseslips
+	phaseslips=0
+	variable i 
+	variable numsteps
+	for (i=0;i<dimensions;i+=1)
+		make/o/n=(numsteps,12) mata
+		mata[][]=matr[i][p][q]
+		variable j 
+		j=0
+		do
+			if (mata[i][9]>1/4-tolcount && mata[i][9]<1/4+tolcount)
+				phaseslips[0]=phaseslips[0]+1
+				j+=lookskip
+			elseif (mata[i][9]>5/4-tolcount && mata[i][9]<5/4+tolcount)
+				phaseslips[1]=phaseslips[1]+1
+				j+=lookskip
+			elseif (mata[i][9]>5/2-tolcount && mata[i][9]<5/2+tolcount)
+				phaseslips[2]=phaseslips[2]+1
+				j+=lookskip
+			else
+				j+=1
+			endif 
+		while (j<numsteps)
+	endfor 
+end

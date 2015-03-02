@@ -1,0 +1,30 @@
+#pragma rtGlobals=3		// Use modern global access method and strict wave access.
+function unscaledfun(x)
+	wave x
+	wave leftdecay
+	wave rightdecay
+	wave x3
+	wave xpos
+	wave ypos
+	variable pos
+	variable/G freq,amp,phasel,phaser,height,slope, tolerance, posright, posleft
+	freq= x[0][0]
+	amp=x[0][1]
+	phasel=x[0][2]
+	phaser=x[0][3]
+	height=x[0][4]
+	slope=x[0][5]
+	Make/d/o/n=(numpnts(xpos)) ytargl
+	Make/d/o/n=(numpnts(xpos)) ytargr
+	ytargl[]=height+amp*sin(freq*xpos[p]+phasel)+slope*(xpos[p]-x3[pos])
+	ytargr[]=height+amp*sin(freq*xpos[p]+phaser)+slope*(xpos[p]-x3[pos])
+	Make/o/n=(numpnts(leftdecay)) errl
+	make/o/n=(numpnts(rightdecay)) errr
+	errl[]=leftdecay[0][p]/(1+((ytargl[p]-ypos[p])^2)/tolerance^2)
+	errr[]=rightdecay[0][p]/(1+((ytargr[p]-ypos[p])^2)/tolerance^2)
+	Make/o/n=(numpnts(leftdecay)) errtot
+	errtot= errl+errr
+	return -sum(errtot)/(posright-posleft)
+	
+end
+	

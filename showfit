@@ -1,0 +1,39 @@
+#pragma rtGlobals=3		// Use modern global access method and strict wave access.
+function showfit(i)
+	variable i
+	wave resultmatrix
+	variable freq,amp,phasel,phaser,height,slope,posleft,posright,pos
+	wave x3,x1,y3
+	freq=resultmatrix[i][0]
+	amp=resultmatrix[i][1]
+	phasel=resultmatrix[i][2]
+	phaser=resultmatrix[i][3]
+	height=resultmatrix[i][4]
+	slope=resultmatrix[i][5]
+	posleft=resultmatrix[i][7]
+	posright=resultmatrix[i][8]
+	pos=resultmatrix[i][10]
+	make/o/n=(pos-posleft+1) xposl
+	make/o/n=(posright-pos+1) xposr
+	xposl[0,pos-posleft]=x3[p+posleft]
+	xposr[0,posright-pos]=x3[p+pos]
+	make/o/n=(numpnts(xposl)) ytargll, ytargrl
+	make/o/n=(numpnts(xposr))ytarglr,ytargrr
+	ytargll[] = height + amp*sin(freq*xposl[p] + phasel) + slope*(xposl[p] - x3[pos])
+	ytarglr[] = height + amp*sin(freq*xposr[p] + phasel) + slope*(xposr[p] - x3[pos])
+
+	ytargrl[] = height + amp*sin(freq*xposl[p] + phaser)  + slope*(xposl[p] - x3[pos])
+	ytargrr[] = height + amp*sin(freq*xposr[p] + phaser)  + slope*(xposr[p] - x3[pos])
+	wave rd20a, vp20
+	Dowindow/f phaseslip
+	if (v_flag==1)
+		killwindow phaseslip
+	endif
+	display/n=phaseslip y3 vs x3
+	appendtograph/c=(0,0,0)/w=phaseslip ytargll vs xposl
+	appendtograph/c=(40000,5000,10000)/w=phaseslip ytargrl vs xposl
+	appendtograph/c=(0,40000,0)/w=phaseslip ytarglr vs xposr
+	appendtograph/c=(0,0,40000)/w=phaseslip ytargrr vs xposr
+	
+	
+end

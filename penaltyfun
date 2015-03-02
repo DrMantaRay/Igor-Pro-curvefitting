@@ -1,0 +1,10 @@
+#pragma rtGlobals=3		// Use modern global access method and strict wave access.
+
+function penaltyfun(wave1)
+	Wave wave1
+	wave rescalea
+	wave rescaleb
+	Make/o/n=(1,6) res
+	res=wave1*rescaleb+rescalea
+	return unscaledfun(res)
+end 

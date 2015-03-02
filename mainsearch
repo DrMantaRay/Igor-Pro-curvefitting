@@ -1,0 +1,49 @@
+#pragma rtGlobals=3		// Use modern global access method and strict wave access.
+Function mainsearch(voltage,resistance)
+	wave voltage
+	wave resistance
+	Variable/G tolerance =.01
+	Variable/G targetfreq=2*pi/10
+	Variable/G width = 7
+	Variable/G overlap = 1
+	Variable/G numperround = 20
+	Variable/G numsteps = 120
+	Variable/G hh
+	Variable/G amp
+	Variable/g maxx
+	Variable/g minx
+	Variable/g step
+	Variable/g vpos 
+	Variable/g pos 
+	Duplicate/o voltage,x1
+	Duplicate/o resistance,y1
+	readandbalance(x1,y1)
+	wave y3
+	wave x3
+	Wavestats y3
+	hh=V_avg
+	amp= v_sdev
+	minx= x3[0]+ width/2
+	maxx=x3[numpnts(x3)-1]-width/2
+	step=(maxx-minx)/numsteps
+	Variable vstep
+	
+	
+	
+	for (vstep=1;vstep<=numsteps;vstep+=1)
+		Make/o/n=(numsteps,12) resultmatrix
+		vpos=minx+ vstep*step
+		pos = floor(BinarySearchInterp (x3, vpos))-1
+		//pos is index of closest point less than vpos
+		Make/o/n=(1,12) good
+		altplansearch(numperround)
+		resultmatrix[vstep-1][]=good[0][q]
+	endfor
+	return resultmatrix 
+
+	
+		
+	
+		
+
+End

@@ -1,0 +1,164 @@
+#pragma rtGlobals=3		// Use modern global access method and strict wave access.
+function nelder_mead(input)  
+	wave input 
+	Variable/G rho=1 //>0
+	Variable/g xi = 2 //>max(rho,1)
+	Variable/g gam = 0.5//between 0 and 1
+	Variable/g sig = 0.5// between 0 and 1
+	Variable/g toleranceb = 1.0E-06
+	Variable/g max_feval = 10000
+	
+	Make/o/n=2 sizemn
+	sizemn[0]=dimsize(input,0)
+	sizemn[1]=dimsize(input,1)
+	if (sizemn[0] !=sizemn[1]+1)
+		print "1, \n"
+		print "1, NELDER_MEAD - Fatal error! \n"
+		print "error- Number of points must be = number of design variables +1"
+	endif
+	Make/o/n=(1,sizemn[1]+1) f  // results of penalty function
+	f=evaluate(input)    // returns row of evaluated vectors (in our case this has 7 columns, 1 row).
+	Variable n_feval=sizemn[1]+1 
+	Make/o/n=(numpnts(f)) index  // Now some ugly code to sort input with respect to f (ugly since input is 7x6 matrix)
+	variable i
+	for (i=0;i<=numpnts(f)-1;i+=1)
+		index[i]=i
+	endfor 
+	matrixtranspose f
+	Sort f,f,index
+	matrixtranspose f
+	Make/o/n=(sizemn[0],sizemn[1]) xx
+	for (i=0;i<=sizemn[1];i+=1)
+		xx[i][]=input[index[i]][q]
+	endfor 
+	Duplicate/o xx input
+	Variable converged  //variables that tell us if stuff is diverged or converged
+	Variable diverged
+	converged = 0
+	diverged=0
+	Make/o/n=(1,sizemn[1]) x_bar
+	Make/o/n=(1,sizemn[1]) x_r          
+	Make/o/n=(1,sizemn[1]) x_e  
+	Make/o/n=(1,sizemn[1]) x_c  
+	Make/o/n=(sizemn[1],sizemn[1]) nolast
+	make/o/n=(numpnts(f)) index
+	Make/o/n=(sizemn[0],sizemn[1]) xsorted
+	variable f_r
+	variable f_e
+	variable f_c
+	do
+		
+
+	        nolast[0,5][]=input[p][q]	//sums each column and returns a row vector (computes midpoint
+	          	// of simplex opposite worst point				     
+		Matrixop/o colsum=sumcols(nolast)							
+		x_bar= colsum/sizemn[1]					      
+		x_r[0][]=(1+rho)*x_bar[0][q]-rho*input[sizemn[1]][q]
+		 // reflection point
+		
+		f_r= penaltyfun(x_r)
+		n_feval=n_feval+1
+		if (f[0][0] <= f_r && f_r<=f[0][sizemn[1]-1])
+			input[sizemn[1]][]=x_r[0][q]
+			f[0][sizemn[1]]=f_r
+			//print "reflection"
+		elseif (f_r<f[0][0])
+			x_e[0][]  = (1+rho*xi)*x_bar[0][q] - rho*xi*input[sizemn[1]][q]
+			f_e = penaltyfun(x_e)   
+			n_feval = n_feval+1
+			if (f_e<f_r)
+				input[sizemn[1]][]=x_e[0][q]
+				f[0][sizemn[1]]=f_e
+				//print"expansion"
+			else
+				input[sizemn[1]][]= x_r[0][q]
+				f[0][sizemn[1]]=f_r
+				//print"eventual reflection"
+			endif
+		elseif (f[0][sizemn[1]-1]<=f_r&& f_r<f[0][sizemn[1]])
+			x_c[0][]= (1+rho*gam)*x_bar[0][q] - rho*gam*input[sizemn[1]][q]
+			f_c = penaltyfun(x_c)
+			n_feval = n_feval+1
+			if (f_c <= f_r)
+				input[sizemn[1]][]=x_c[0][q]
+				f[0][sizemn[1]]=f_c
+				//print "outside contraction"
+			else
+				shrink(input,sig)
+				n_feval=n_feval+sizemn[1]
+				//print "shrink1"
+			endif
+		else 
+			x_c[0][]= (1-gam)*x_bar[0][q] + gam*input[sizemn[1]][q] 
+			f_c = penaltyfun(x_c)
+			n_feval = n_feval+1
+			if (f_c<f[0][sizemn[1]])
+				input[sizemn[1]][]= x_c[0][q]
+				f[0][sizemn[1]]=f_c
+				//print "inside contraction"
+			else 
+				shrink(input,sig)
+				n_feval=n_feval+sizemn[1]
+				//print "shrink2"
+			endif
+		endif
+		variable j  //Resort points aka sort them with respect to f
+		for (j=0;j<=numpnts(f)-1;j+=1)
+			index[j]=j
+		endfor
+		matrixtranspose f
+		Sort f,f,index
+		matrixtranspose f
+		for (j=0;j<=sizemn[1];j+=1)
+			xsorted[j][]=input[index[j]][q]
+		endfor
+		Duplicate/o xsorted,input
+		converged=f[0][sizemn[1]]-f[0][0]<toleranceb
+		diverged= n_feval>max_feval // if not
+	while (!converged && !diverged)
+	make/o/n=(1,sizemn[1]) xb    //best result 
+	xb[0][]=input[0][q]
+	 // if it converges
+	 if (0)
+		print "The best result was" 
+		print xb
+		print "The number of iterations was"
+		print n_feval
+	endif
+	if (diverged)
+			print "Houston there is a problem. No convergence"
+	endif
+
+	
+end
+	
+function evaluate(inpute)        //evalutes penalty function for every row of inpute
+	wave inpute
+	wave f 
+	wave sizemn
+	variable i 
+	f=0
+	for (i=0;i<=sizemn[1];i+=1)
+		matrixop/o rowx=row(inpute,i)
+		f[0][i]=penaltyfun(rowx)
+	endfor
+end
+function shrink(input,sig)   //shrink simplex towards best point 
+	wave input
+	variable sig
+	wave f 
+	wave sizemn
+	Make/o/n=(1,sizemn[1]) shrinker
+	shrinker[0][]=input[0][q]
+	 f[0][0]= penaltyfun(shrinker)
+	 variable i 
+	 for (i=1;i<=sizemn[1];i+=1)
+		input[i][]=sig*input[i][q]+(1-sig)*input[0][q]
+		Matrixop/o rowin=row(input,i)
+ 		f[0][i] = penaltyfun(rowin)
+ 	endfor
+ 
+end
+
+	
+	

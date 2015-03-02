@@ -1,0 +1,29 @@
+#pragma rtGlobals=3		// Use modern global access method and strict wave access.
+Variable/G  width overlap pos posleft posright targetfreq
+
+Function readandbalance(x1,y1)
+	wave x1 
+	wave y1
+	Make/d/o/n=(numpnts(x1)) y2   // y2 is the balanced resistance
+	variable a
+	Sort x1, x1, y1                           //sorting voltages and resistances with respect to increasing voltage
+	make/o/n=10 w             // dummy wave to pass to optimize
+	Make/o params={w,a}
+	Optimize dynrange,params     //optimizes slope to subtract off 
+	wave y2
+	y2=y1+v_minloc*x1
+	Duplicate/o x1,x3                     // we will use x3, y3 in next step
+	Duplicate/o y2,y3
+End
+Function dynrange(w,a)            // returns difference between max and min of resistance given a subtracted slope
+	variable a
+	wave w 
+	wave x1
+	wave y1
+	Make/o/n=(numpnts(x1)) difference
+	difference=y1+a*x1
+	Variable drange = Wavemax(difference)-Wavemin(difference)
+	return drange 
+end
+
+// dynamic range
